@@ -130,18 +130,22 @@ export default function Widget({ options }) {
           expanded={options.expanded}
         />
       )}
-      {disks.map((disk) => (
+      {disks.map((disk, idx) => {
+        const diskLabels = options.diskLabels;
+        const diskLabel = Array.isArray(diskLabels) ? diskLabels[idx] : undefined;
+        return (
         <Resource
           key={`disk_${disk.mnt_point ?? disk.device_name}`}
           icon={FiHardDrive}
           value={t(diskUnits, { value: disk.free })}
-          label={t("glances.free")}
+          label={diskLabel || t("glances.free")}
           expandedValue={t(diskUnits, { value: disk.size })}
           expandedLabel={t("glances.total")}
           percentage={disk.percent}
           expanded={options.expanded}
         />
-      ))}
+        );
+      })}
       {options.gpu && data.gpu && data.gpu.length > 0 && data.gpu.map((gpu) => (
         <Resource
           key={`gpu_${gpu.gpu_id}`}
