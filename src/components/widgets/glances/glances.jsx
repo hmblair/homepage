@@ -3,6 +3,7 @@ import { useTranslation } from "next-i18next";
 import { useContext } from "react";
 import { FaMemory, FaRegClock, FaThermometerHalf } from "react-icons/fa";
 import { FiCpu, FiHardDrive } from "react-icons/fi";
+import { BsGpuCard } from "react-icons/bs";
 import useSWR from "swr";
 import { SettingsContext } from "utils/contexts/settings";
 
@@ -47,6 +48,7 @@ export default function Widget({ options }) {
           options.disk.map((disk) => (
             <Resource key={`disk_${disk}`} icon={FiHardDrive} label={t("glances.wait")} percentage="0" />
           ))}
+        {options.gpu && <Resource icon={BsGpuCard} label={t("glances.wait")} percentage="0" />}
         {options.uptime && <Resource icon={FaRegClock} label={t("glances.wait")} percentage="0" />}
         {options.label && <WidgetLabel label={options.label} />}
       </Resources>
@@ -140,6 +142,40 @@ export default function Widget({ options }) {
           expanded={options.expanded}
         />
       ))}
+      {options.gpu && data.gpu && data.gpu.length > 0 && data.gpu.map((gpu) => (
+        <Resource
+          key={`gpu_${gpu.gpu_id}`}
+          icon={BsGpuCard}
+          value={t("common.number", {
+            value: gpu.proc,
+            style: "unit",
+            unit: "percent",
+            maximumFractionDigits: 0,
+          })}
+          label={t("glances.gpu")}
+          percentage={gpu.proc}
+        />
+      ))}
+      {options.gpu && data.gpu && data.gpu.length > 0 && data.gpu.map((gpu) => (
+        <Resource
+          key={`gpumem_${gpu.gpu_id}`}
+          icon={FaMemory}
+          value={t("common.bytes", {
+            value: gpu.memTotal - gpu.memUsed,
+            maximumFractionDigits: 1,
+            binary: true,
+          })}
+          label={t("glances.free")}
+          expandedValue={t("common.bytes", {
+            value: gpu.memTotal,
+            maximumFractionDigits: 1,
+            binary: true,
+          })}
+          expandedLabel={t("glances.total")}
+          percentage={gpu.mem}
+          expanded={options.expanded}
+        />
+      ))}
       {options.cputemp && mainTemp > 0 && (
         <Resource
           icon={FaThermometerHalf}
@@ -161,6 +197,20 @@ export default function Widget({ options }) {
           expanded={options.expanded}
         />
       )}
+      {options.gpu && data.gpu && data.gpu.length > 0 && data.gpu.map((gpu) => (
+        <Resource
+          key={`gputemp_${gpu.gpu_id}`}
+          icon={FaThermometerHalf}
+          value={t("common.number", {
+            value: gpu.temperature,
+            maximumFractionDigits: 0,
+            style: "unit",
+            unit,
+          })}
+          label={t("glances.temp")}
+          percentage={Math.round((gpu.temperature / 83) * 100)}
+        />
+      ))}
       {options.uptime && data.uptime && (
         <Resource
           icon={FaRegClock}

@@ -42,7 +42,7 @@ async function retrieveFromGlancesAPI(privateWidgetOptions, endpoint) {
 }
 
 export default async function handler(req, res) {
-  const { index, cputemp: includeCpuTemp, uptime: includeUptime, disk: includeDisks, version } = req.query;
+  const { index, cputemp: includeCpuTemp, uptime: includeUptime, disk: includeDisks, gpu: includeGpu, version } = req.query;
 
   const privateWidgetOptions = await getPrivateWidgetOptions("glances", index);
   privateWidgetOptions.version = version ?? 3;
@@ -68,6 +68,28 @@ export default async function handler(req, res) {
 
     if (includeDisks) {
       data.fs = await retrieveFromGlancesAPI(privateWidgetOptions, "fs");
+    }
+
+    if (includeGpu) {
+      data.gpu = await retrieveFromGlancesAPI(privateWidgetOptions, "gpu");
+      // Enrich GPU data with absolute VRAM from nvidia-smi
+      try {
+        const { execSync } = require("child_process");
+        const nvOut = execSync(
+          "nvidia-smi --query-gpu=index,memory.used,memory.total --format=csv,noheader,nounits",
+          { timeout: 3000 },
+        ).toString().trim();
+        const nvGpus = nvOut.split("\n").map((line) => {
+          const [idx, used, total] = line.split(",").map((s) => s.trim());
+          return { index: parseInt(idx, 10), memUsed: parseInt(used, 10) * 1024 * 1024, memTotal: parseInt(total, 10) * 1024 * 1024 };
+        });
+        data.gpu = data.gpu.map((g, i) => {
+          const nv = nvGpus[i];
+          return nv ? { ...g, memUsed: nv.memUsed, memTotal: nv.memTotal } : g;
+        });
+      } catch (e) {
+        // nvidia-smi not available, keep percentage-only data
+      }
     }
 
     return res.status(200).send(data);
